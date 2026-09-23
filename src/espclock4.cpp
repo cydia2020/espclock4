@@ -552,7 +552,6 @@ void setup()
 {
   // Initialization
   setCpuFrequencyMhz(80);                    // Reduce CPU frequency to save power
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Disable brownout for more stable battery operation
   init_debug();
   if (!FILESYS.begin(true))
     fatal_error();
