@@ -274,9 +274,6 @@ bool init_wifi(int timeout = 10) {
   wifimgr.addParameter(&form_clockTime);
   wifimgr.addParameter(&form_timezone);
   wifimgr.addParameter(&form_scriptUrl);
-	
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH); // Note: built-in LED for ESP32 D1 Mini is active high
 
   bool success = false;
   if (FILESYS.exists(CONFIG_FILE)) {
@@ -291,8 +288,6 @@ bool init_wifi(int timeout = 10) {
     save_config();
     debug("wifimgr.startConfigPortal(); success = %d", success);
   }
-  
-	digitalWrite(LED_BUILTIN, LOW);
 
   if (!success) return false;
 
