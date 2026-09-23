@@ -551,7 +551,7 @@ void wakeup_ulp()
 void setup()
 {
   // Initialization
-  setCpuFrequencyMhz(80);                    // Reduce CPU frequency to save power
+  setCpuFrequencyMhz(80); // Reduce CPU frequency to save power
   init_debug();
   if (!FILESYS.begin(true))
     fatal_error();

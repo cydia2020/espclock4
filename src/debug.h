@@ -16,51 +16,37 @@
  * limitations under the License.
  */
 
-#ifdef DEBUG 
-
-  void init_debug() {
-    Serial.begin(115200);
-  }
-
-  void netdebug(const char *format, ...) {
-    WiFiUDP udpClient;
-    Syslog syslog(udpClient, "192.168.1.3", 514, getClockName(), "", LOG_KERN, SYSLOG_PROTO_BSD);
-
-    char buf[1024];
-    va_list ap;
-    va_start(ap, format);
-    vsnprintf(buf, sizeof(buf), format, ap);
-    va_end(ap);
-    
-    Serial.println(buf);
-
-    if (WiFi.status() == WL_CONNECTED) { 
-      syslog.log(buf); 
-      delay(500); 
-    }
-  }
-
-  void debug(const char *format, ...) {
-    char buf[300];
-    va_list ap;
-    va_start(ap, format);
-    vsnprintf(buf, sizeof(buf), format, ap);
-    va_end(ap);
-    Serial.println(buf);
-  }
-
-#else // !DEBUG
-
-  void init_debug() {}
-  void netdebug(const char *format, ...) {}
-  void debug(const char *format, ...) {}
-
-#endif // DEBUG
-
 #include <Syslog.h>
-char* getClockName();
+#include "soc/rtc.h"
 
-void status(const char *format, ...) {
+char *getClockName();
+
+#ifdef DEBUG
+
+void init_debug()
+{
+  Serial.begin(115200);
+
+  rtc_slow_freq_t src = rtc_clk_slow_freq_get();
+    switch (src) {
+        case RTC_SLOW_FREQ_RTC:
+            Serial.println("Slow Clock Source: Internal RC Oscillator (150kHz/136kHz)\n");
+            break;
+        case RTC_SLOW_FREQ_32K_XTAL:
+            Serial.println("Slow Clock Source: External 32kHz Crystal\n");
+            break;
+        case RTC_SLOW_FREQ_8MD256:
+            Serial.println("Slow Clock Source: Internal 8MHz/256 (Divided fast clock)\n");
+            break;
+        default:
+            Serial.println("Slow Clock Source: Unknown\n");
+            break;
+    }
+
+}
+
+void netdebug(const char *format, ...)
+{
   WiFiUDP udpClient;
   Syslog syslog(udpClient, "192.168.1.3", 514, getClockName(), "", LOG_KERN, SYSLOG_PROTO_BSD);
 
@@ -69,11 +55,50 @@ void status(const char *format, ...) {
   va_start(ap, format);
   vsnprintf(buf, sizeof(buf), format, ap);
   va_end(ap);
-  
+
   Serial.println(buf);
 
-  if (WiFi.status() == WL_CONNECTED) { 
-    syslog.log(buf); 
-    delay(500); 
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    syslog.log(buf);
+    delay(500);
+  }
+}
+
+void debug(const char *format, ...)
+{
+  char buf[300];
+  va_list ap;
+  va_start(ap, format);
+  vsnprintf(buf, sizeof(buf), format, ap);
+  va_end(ap);
+  Serial.println(buf);
+}
+
+#else // !DEBUG
+
+void init_debug() {}
+void netdebug(const char *format, ...) {}
+void debug(const char *format, ...) {}
+
+#endif // DEBUG
+
+void status(const char *format, ...)
+{
+  WiFiUDP udpClient;
+  Syslog syslog(udpClient, "192.168.1.3", 514, getClockName(), "", LOG_KERN, SYSLOG_PROTO_BSD);
+
+  char buf[1024];
+  va_list ap;
+  va_start(ap, format);
+  vsnprintf(buf, sizeof(buf), format, ap);
+  va_end(ap);
+
+  Serial.println(buf);
+
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    syslog.log(buf);
+    delay(500);
   }
 }
