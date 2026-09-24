@@ -56,6 +56,22 @@ const char *jscript = QUOTE(
     } </script>);
 // clang-format on
 
+#define CALIBRATE_ONE(cali_clk) calibrate_one(cali_clk, #cali_clk)
+static uint32_t calibrate_one(rtc_cal_sel_t cal_clk, const char *name)
+{
+
+  const uint32_t cal_count = 1000;
+  const float factor = (1 << 19) * 1000.0f;
+  uint32_t cali_val;
+  printf("%s:\n", name);
+  for (int i = 0; i < 20; ++i)
+  {
+    printf("calibrate (%d): ", i);
+    cali_val = rtc_clk_cal(cal_clk, cal_count);
+    printf("%.3f kHz\n", factor / (float)cali_val);
+  }
+  return cali_val;
+}
 /*
  * PHP script can be hosted on your own server:
  *
@@ -554,11 +570,23 @@ void wakeup_ulp()
 void setup()
 {
   // Initialization
-  setCpuFrequencyMhz(80);                    // Reduce CPU frequency to save power
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Disable brownout for more stable battery operation
+  setCpuFrequencyMhz(80); // Reduce CPU frequency to save power
+  rtc_clk_32k_bootstrap(4096); // Force 32kHz crystal to start up
+  rtc_clk_32k_enable(true);
+
+  uint32_t cal_32k = CALIBRATE_ONE(RTC_CAL_32K_XTAL);
 
   delay(1000);                                   // Wait for quartz to stabilize before setting slow clock source. Otherwise ULP timing will be inaccurate.
   rtc_clk_slow_freq_set(RTC_SLOW_FREQ_32K_XTAL); // Use 32kHz crystal as slow clock source for more accurate ULP timing
+
+  if (cal_32k == 0)
+  {
+    printf("32K XTAL OSC has not started up");
+  }
+  else
+  {
+    printf("done\n");
+  }
 
   init_debug();
 

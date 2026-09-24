@@ -42,7 +42,7 @@
 #include "debug.h"
 
 // Default values
-#define DEFAULT_SCRIPT_URL "http://espclock.randseq.org/now.php?tz=[tz]"
+#define DEFAULT_SCRIPT_URL "http://10.0.0.2:32123/sync_time.php"
 #define CONFIG_FILE "/espclock.ini"
 #define FILESYS LittleFS
 
