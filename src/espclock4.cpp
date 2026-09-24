@@ -46,12 +46,15 @@ void debug_vars(const char *prefix) {}
 
 // Application Javascript to be injected into WiFiManager's config page
 #define QUOTE(...) #__VA_ARGS__
+
+// clang-format off
 const char *jscript = QUOTE(
     <script>
         document.addEventListener('DOMContentLoaded', tzinit, false);
     function tzinit() {
       document.getElementById("timezone").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    } < / script >);
+    } </script>);
+// clang-format on
 
 /*
  * PHP script can be hosted on your own server:
@@ -551,8 +554,14 @@ void wakeup_ulp()
 void setup()
 {
   // Initialization
-  setCpuFrequencyMhz(80); // Reduce CPU frequency to save power
+  setCpuFrequencyMhz(80);                    // Reduce CPU frequency to save power
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Disable brownout for more stable battery operation
+
+  delay(1000);                                   // Wait for quartz to stabilize before setting slow clock source. Otherwise ULP timing will be inaccurate.
+  rtc_clk_slow_freq_set(RTC_SLOW_FREQ_32K_XTAL); // Use 32kHz crystal as slow clock source for more accurate ULP timing
+
   init_debug();
+
   if (!FILESYS.begin(true))
     fatal_error();
 
