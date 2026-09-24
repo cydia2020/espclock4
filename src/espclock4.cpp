@@ -17,7 +17,7 @@
  */
 
 #include "espclock4.h"
-
+RTC_DATA_ATTR int bootCount = 0;
 // Ordinary variables - not persisted across deep sleep
 static bool shouldSaveConfig = false;
 static char param_tz[48] = "UTC", param_url[128] = DEFAULT_SCRIPT_URL;
@@ -571,24 +571,27 @@ void setup()
 {
   // Initialization
   setCpuFrequencyMhz(80); // Reduce CPU frequency to save power
-  rtc_clk_32k_bootstrap(4096); // Force 32kHz crystal to start up
-  rtc_clk_32k_enable(true);
 
-  uint32_t cal_32k = CALIBRATE_ONE(RTC_CAL_32K_XTAL);
-
-  delay(1000);                                   // Wait for quartz to stabilize before setting slow clock source. Otherwise ULP timing will be inaccurate.
-  rtc_clk_slow_freq_set(RTC_SLOW_FREQ_32K_XTAL); // Use 32kHz crystal as slow clock source for more accurate ULP timing
-
-  if (cal_32k == 0)
+  if (bootCount == 0)
   {
-    printf("32K XTAL OSC has not started up");
-  }
-  else
-  {
-    printf("done\n");
+    rtc_clk_32k_bootstrap(4096); // Force 32kHz crystal to start up
+    rtc_clk_32k_enable(true);
+    uint32_t cal_32k = CALIBRATE_ONE(RTC_CAL_32K_XTAL);
+    rtc_clk_slow_freq_set(RTC_SLOW_FREQ_32K_XTAL); // Use 32kHz crystal as slow clock source for more accurate ULP timing
+
+    if (cal_32k == 0)
+    {
+      printf("32K XTAL OSC has not started up");
+    }
+    else
+    {
+      printf("done\n");
+    }
   }
 
+  bootCount++;
   init_debug();
+  rtc_clk_slow_freq_set(RTC_SLOW_FREQ_32K_XTAL); // Use 32kHz crystal as slow clock source for more accurate ULP timing
 
   if (!FILESYS.begin(true))
     fatal_error();
@@ -647,7 +650,28 @@ void setup()
   // Sleep now and let ULP take over
   if (wake_cause == ESP_SLEEP_WAKEUP_UNDEFINED)
     load_and_run_ulp();
-  esp_sleep_enable_ulp_wakeup();
+
+  esp_err_t esp_sleep_state = esp_sleep_enable_ulp_wakeup();
+
+  switch (esp_sleep_state)
+  {
+  case ESP_OK:
+    debug("setup(): esp_sleep_enable_ulp_wakeup() succeeded");
+    break;
+  case ESP_ERR_NOT_SUPPORTED:
+    debug("setup(): esp_sleep_enable_ulp_wakeup() not supported");
+    break;
+  case ESP_ERR_INVALID_STATE:
+    debug("setup(): esp_sleep_enable_ulp_wakeup() conflict");
+    break;
+  default:
+    debug("setup(): esp_sleep_enable_ulp_wakeup() failed");
+    break;
+  }
+  if (esp_sleep_state == ESP_OK)
+    debug("setup(): ULP wakeup enabled");
+  else
+    debug("setup(): ULP wakeup failed");
   esp_deep_sleep_start();
 }
 
